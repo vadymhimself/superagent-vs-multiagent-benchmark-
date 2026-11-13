@@ -36,7 +36,7 @@ Shared superagent cheaper in **0 of 1,000 runs** under these assumptions. Median
 3. A separate client's entire tail is treated as a cache write after 5-minute inactivity, rather than modeling precise prefix reuse.
 4. Exact extended-thinking context retention depends on API configuration.
 5. Uniform event times, synthetic client skew, and fixed token lengths may not resemble production traffic.
-6. Latency, queueing, privacy isolation, context pollution, answer quality, and rate limits are excluded.
+6. Average response latency is modeled separately in `latency_model.py` using an illustrative M/D/1 queue approximation, not measured API timings. Privacy isolation, context pollution, answer quality, and rate limits are not empirically evaluated.
 7. The price assumptions should be checked against current model-specific Anthropic pricing before making any financial decision.
 
 ## Next experiment
@@ -69,3 +69,8 @@ The result depends on cache TTL, prompt ordering, whether a cacheable prefix act
 ## Reproducibility checks
 
 Use Python 3.10+ and NumPy. The published script's default seed is `20261113`. The CSV has 1,000 data rows with columns `run,separate_usd,shared_usd`, indexed from 0 to 999. Summary values are rounded to two decimals in this README. The code, not the rounded table, is the authoritative specification of this synthetic experiment.
+
+
+## Metrics and scope
+
+The benchmark tracks **cost**, **average response latency**, and **reasoning / task success quality**. Average response latency is the only timing metric; there is no separate “execution speed” metric. `latency_model.py` provides a simplified queueing estimate using a 20-second assumed service time and 200 requests per eight hours, **not measured API latency**. Reasoning and task success remain proposed evaluation dimensions, not measured outcomes. The benchmark does not establish an overall winner.
