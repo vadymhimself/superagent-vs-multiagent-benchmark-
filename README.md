@@ -87,3 +87,10 @@ The original presentation models 200 follow-up messages across 1,000 chats in an
 This gives **21.61 seconds**, displayed as **21.6 seconds** in the presentation, approximately **+1.6 seconds / +8%** versus independent sessions. The model assumes Poisson arrivals for queueing (distinct from the uniform-time cost Monte Carlo), one serial worker for the shared agent, stable arrival rates, and unlimited concurrency/no queue for independent sessions. These assumptions are not verified production behavior; a shared agent with parallel execution could have different latency. No API latency measurements have been made.
 
 Reproduce with `python latency_model.py`.
+
+
+## Reasoning quality and task success: empirical evaluation required
+
+**No theoretical quality score is reported.** The cost Monte Carlo and M/D/1 latency model cannot establish whether either architecture answers correctly, reasons better, or completes more tasks. These outcomes require an empirical benchmark with real model calls, not invented quality percentages.
+
+Proposed protocol: create the same held-out set of realistic customer messages and per-customer histories for both architectures; replay the exact same events and order, with identical model, tools, temperature, and evaluation budget. For the shared architecture, include all cross-customer context as specified; for independent sessions, include only the customer's own context. Grade task completion and factual correctness against reference answers or deterministic task checks, and track incorrect cross-customer information usage and privacy leakage. Use blinded grading and repeated trials where answers are stochastic. Report success rate, error rate, confidence intervals, and cost and human response latency on the same test set. Do not declare a quality winner until such tests run.
