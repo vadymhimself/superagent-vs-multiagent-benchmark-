@@ -46,3 +46,26 @@ Replay identical 200-turn workloads using actual API requests with explicit cach
 - [Anthropic prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)
 - [SGLang](https://arxiv.org/abs/2312.07104)
 - [Preble, ICLR 2025](https://proceedings.iclr.cc/paper_files/paper/2025/hash/5bc342f48de8264779952fac378f96dc-Abstract-Conference.html)
+
+
+## Exact simulation algorithm
+
+Each run uses a seeded NumPy random generator. It samples 200 event timestamps uniformly over 480 minutes and sorts them. It samples a client-popularity exponent uniformly between 0.5 and 1.4; each of the 200 events selects a client with probability proportional to `(client_index + 20)^(-exponent)`. Therefore the experiment has many inactive clients, some repeat customers, and uneven per-client history lengths. This is **not** a fitted real-world activity distribution.
+
+For each event, the simulator tracks five billable buckets separately for each architecture: regular input, cache reads, 5-minute cache writes, 1-hour cache writes, and output. A shared 30k-token prefix is read when the previous event was at most five minutes ago, otherwise written at the 5-minute write rate. The independent architecture tracks 1,200 tokens plus the accumulated 500-token history of each client and reads or rewrites that tail according to the time since **that client's** previous event. The shared architecture tracks the total accumulated history across all events, reads it if the previous global event was within 60 minutes, and otherwise rewrites it at the one-hour rate. In addition, it charges the selected client's 1,200-token profile as uncached input on each shared-agent request.
+
+The model bills 200 regular input tokens and 700 output tokens (300 visible + 400 thinking) per event for both architectures. It grows retained history by 500 tokens (200 + 300), **not** by 900; thinking is billed but assumed not retained. The synthetic cost formula is:
+
+`cost_USD = (4 * input + 0.20 * cache_read + 5 * write_5m + 8 * write_1h + 20 * output) / 1_000_000`
+
+The common-prefix clock is updated on every event. The shared-history clock is updated on every event. The per-client clock is updated only on that client's events. These clocks are a simplification, **not** a guarantee of actual cache TTL renewal behavior.
+
+## Interpretation and sensitivity
+
+The experiment fixes **200 replies total**, not 200 replies per client. A single shared history therefore reaches 100,000 retained tokens by the end, while most individual client histories remain short. It assumes a shared agent can access the relevant client's profile without contamination from other clients, but it does **not** test that assumption.
+
+The result depends on cache TTL, prompt ordering, whether a cacheable prefix actually matches, the distribution of interarrival times, retained context size, output token counts, and pricing. The toy model should not be used to claim the optimal production architecture. A true Anthropic comparison must inspect real request-level usage counters and cache breakpoint semantics.
+
+## Reproducibility checks
+
+Use Python 3.10+ and NumPy. The published script's default seed is `20261113`. The CSV has 1,000 data rows with columns `run,separate_usd,shared_usd`, indexed from 0 to 999. Summary values are rounded to two decimals in this README. The code, not the rounded table, is the authoritative specification of this synthetic experiment.
