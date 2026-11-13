@@ -74,3 +74,16 @@ Use Python 3.10+ and NumPy. The published script's default seed is `20261113`. T
 ## Metrics and scope
 
 The benchmark tracks **cost**, **average response latency**, and **reasoning / task success quality**. Average response latency is the only timing metric; there is no separate “execution speed” metric. `latency_model.py` provides a simplified queueing estimate using a 20-second assumed service time and 200 requests per eight hours, **not measured API latency**. Reasoning and task success remain proposed evaluation dimensions, not measured outcomes. The benchmark does not establish an overall winner.
+
+
+## Average human wait for an AI reply (original presentation)
+
+**Definition:** elapsed time from when a human sends a message in one of the 1,000 customer chats until the AI finishes its reply. This is *end-to-end response latency*, including queue wait and generation; it is not a separate “execution speed” metric.
+
+The original presentation models 200 follow-up messages across 1,000 chats in an eight-hour window. Each message takes an **assumed** 20 seconds to process. For 1,000 independent sessions it assumes no centralized queue, so the modeled mean human wait is **20.0 seconds**. For one shared Super Agent with serial processing, an M/D/1 approximation uses arrival rate λ = 200/(8 × 3,600) messages/second and deterministic service time S = 20 seconds:
+
+`rho = lambda * S; mean_wait = S + lambda * S**2 / (2 * (1 - rho))`
+
+This gives **21.61 seconds**, displayed as **21.6 seconds** in the presentation, approximately **+1.6 seconds / +8%** versus independent sessions. The model assumes Poisson arrivals for queueing (distinct from the uniform-time cost Monte Carlo), one serial worker for the shared agent, stable arrival rates, and unlimited concurrency/no queue for independent sessions. These assumptions are not verified production behavior; a shared agent with parallel execution could have different latency. No API latency measurements have been made.
+
+Reproduce with `python latency_model.py`.
